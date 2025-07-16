@@ -68,9 +68,9 @@ const login = async (req, res, next) => {
                 name: result.data.name,
                 email: result.data.email,
                 username: result.data.username,
-                profilePictureUrl: null,
-                phone : null,
-                address : null
+                profilePictureUrl: result.data.profilePictureUrl,
+                phone : result.data.phone,
+                address : result.data.address
             }
         });
 
