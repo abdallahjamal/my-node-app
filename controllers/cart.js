@@ -378,10 +378,72 @@ const applyCouponToCart = (req, res, next) => {
     });
 };
 
+const checkout = (req, res, next) => {
+    const userId = req.user._id;
+
+    if (!userId) {
+        return returnJson(res, 401, false, "غير مصرح به: معرف المستخدم مفقود.", null);
+    }
+
+    // الخطوة 1: جلب سلة المستخدم للتحقق من الكوبون
+    Cart.getUserCart(userId, (userCartResult) => {
+        if (!userCartResult.status) {
+            return next(createError(500, userCartResult.message));
+        }
+        const userCart = userCartResult.data;
+        const previouslyAppliedCouponId = userCart.appliedCouponId;
+        const couponCode = userCart.appliedCouponCode;
+
+        // الخطوة 2: تحديث الكوبون (إذا كان هناك كوبون مطبق)
+        // يجب أن يتم هذا فقط عند إتمام عملية الشراء وليس عند كل تطبيق للكوبون
+        if (previouslyAppliedCouponId && couponCode) {
+            Coupon.incrementUsage(previouslyAppliedCouponId.toString(), userId, (updateResult) => {
+                if (!updateResult.status) {
+                    console.error("خطأ في تحديث استخدام الكوبون:", updateResult.message);
+                    // لا توقف العملية إذا فشل تحديث الكوبون، لأن إفراغ السلة أهم
+                }
+                // بعد تحديث الكوبون، ننتقل لإفراغ السلة
+                emptyTheCart(userId, res, next, couponCode);
+            });
+        } else {
+            // لا يوجد كوبون، ننتقل مباشرة لإفراغ السلة
+            emptyTheCart(userId, res, next, null);
+        }
+    });
+};
+
+
+// دالة مساعدة لتقليل التكرار
+const emptyTheCart = (userId, res, next, couponCode) => {
+    // الخطوة 3: إفراغ سلة المستخدم
+    Cart.emptyCart(userId, (emptyCartResult) => {
+        if (!emptyCartResult.status) {
+            return next(createError(500, emptyCartResult.message));
+        }
+
+        // الخطوة 4: مسح معلومات الكوبون من وثيقة السلة الرئيسية
+        Cart.updateCouponInfo(userId, null, null, 0, (updateCartResult) => {
+            if (!updateCartResult.status) {
+                console.error("خطأ في مسح معلومات الكوبون من السلة:", updateCartResult.message);
+                // لا توقف العملية، فهي ليست حرجة
+            }
+            
+            // الخطوة 5: إرسال الرد النهائي
+            let successMessage = "تم إتمام عملية الشراء بنجاح! سلة التسوق فارغة الآن.";
+            if (couponCode) {
+                successMessage += ` وتم تسجيل استخدام الكوبون '${couponCode}'.`;
+            }
+
+            return returnJson(res, 200, true, successMessage, null);
+        });
+    });
+};
+
 module.exports = {
     addUpdateCart,
     getCartItems,
     updateCartItem,
     deleteCartItem,
-    applyCouponToCart
+    applyCouponToCart,
+    checkout 
 };
