@@ -7,6 +7,7 @@ const auth = require('../middleware/auth');
 const router = Router();
 
 router.post('/', auth, couponController.createCoupon);
+router.post('/use', auth, couponController.useCoupon);
 router.get('/', auth,  couponController.getCoupons);
 router.get('/:id', auth, couponController.getCoupon);
 router.put('/:id', auth,  couponController.updateCoupon);
