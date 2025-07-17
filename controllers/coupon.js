@@ -80,6 +80,36 @@ const deleteCoupon = (req, res, next) => {
     });
 };
 
+const useCoupon = (req, res, next) => {
+    const userId = req.user._id;
+    
+    const { code } = req.body;
+
+    if (!userId) {
+        return returnJson(res, 401, false, "غير مصرح به: معرف المستخدم مفقود.", null);
+    }
+
+    if (!code) {
+        return returnJson(res, 400, false, "يرجى إرسال رمز الكوبون", null);
+    }
+
+    Coupon.findByCode(code, (result) => {
+        if (!result.status) {
+            return next(createError(500, result.message));
+        }
+
+        const coupon = result.data;
+
+        Coupon.incrementUsage(coupon._id, userId, (updateResult) => {
+            if (!updateResult.status) {
+                return next(createError(500, updateResult.message));
+            }
+
+            return returnJson(res, 200, true, "تم تسجيل استخدام الكوبون", null);
+        });
+    });
+};
+
 
 
 module.exports = {
@@ -87,5 +117,6 @@ module.exports = {
     getCoupons,
     getCoupon,
     updateCoupon,
-    deleteCoupon
+    deleteCoupon,
+    useCoupon
 };
