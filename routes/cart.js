@@ -8,6 +8,7 @@ const router = Router();
 router.use(auth); 
 
 router.post('/', cartController.addUpdateCart);
+router.post('/checkout', auth, cartController.checkout);
 router.get('/', cartController.getCartItems); 
 router.put('/:cartItemId', cartController.updateCartItem);
 router.delete('/:cartItemId', cartController.deleteCartItem);
