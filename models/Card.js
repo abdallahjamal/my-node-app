@@ -219,6 +219,18 @@ class Cart {
         });
     }
 
+        static emptyCart(userId, cb) {
+        dbConnection("cart_items", async (collection) => {
+            try {
+                const userObjectId = new ObjectId(userId);
+                const result = await collection.deleteMany({ userId: userObjectId });
+                cb({ status: true, message: `تم إفراغ سلة المستخدم بنجاح. (${result.deletedCount} عنصر تم حذفه)` });
+            } catch (err) {
+                cb({ status: false, message: err.message });
+            }
+        });
+    }
+
  
 
 }
